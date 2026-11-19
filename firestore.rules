@@ -1,0 +1,11 @@
+rules_version = '2';
+
+// Web cá nhân, không đăng nhập: chỉ mở đúng chỗ dữ liệu của Postman Mini (apps/postman-mini/...).
+// Nếu project đang có rules cho app khác: chỉ THÊM khối "match /apps/postman-mini/..." vào rules hiện có.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /apps/postman-mini/{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

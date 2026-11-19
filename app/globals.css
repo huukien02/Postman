@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/* ---------- Màu (light) ---------- */
+:root {
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --subtle: #f1f3f6;
+  --line: #e3e6eb;
+  --fg: #1d2430;
+  --muted: #6b7482;
+  --accent: #4f46e5;
+  --accent-fg: #ffffff;
+  --ok: #15803d;
+  --warn: #b45309;
+  --err: #dc2626;
+  --m-get: #15803d;
+  --m-post: #b45309;
+  --m-put: #1d4ed8;
+  --m-patch: #7c3aed;
+  --m-delete: #dc2626;
+  --m-other: #475569;
+  color-scheme: light;
+}
+
+/* ---------- Màu (dark) ---------- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1216;
+    --panel: #161a20;
+    --subtle: #1d222a;
+    --line: #2a303a;
+    --fg: #e6e9ee;
+    --muted: #8b94a3;
+    --accent: #818cf8;
+    --accent-fg: #0f1216;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --err: #f87171;
+    --m-get: #4ade80;
+    --m-post: #fbbf24;
+    --m-put: #60a5fa;
+    --m-patch: #c084fc;
+    --m-delete: #f87171;
+    --m-other: #94a3b8;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-subtle: var(--subtle);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-err: var(--err);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jb), ui-monospace, Consolas, monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 14px;
+}
+
+/* CodeMirror chiếm hết chiều cao khung chứa */
+.cm-fill,
+.cm-fill .cm-editor {
+  height: 100%;
+}
+.cm-editor {
+  font-size: 13px;
+}
+.cm-editor.cm-focused {
+  outline: none !important;
+}
+.cm-editor .cm-scroller {
+  font-family: var(--font-mono);
+}
+
+/* Thanh cuộn mảnh */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}

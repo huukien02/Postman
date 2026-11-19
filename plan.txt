@@ -1,0 +1,157 @@
+================================================================================
+              PLAN CODE "POSTMAN MINI" (v2 - cập nhật 2026-11-19)
+================================================================================
+
+KỲ VỌNG:
+- App đơn giản, giao diện dễ dùng, dễ nhìn hơn Postman.
+- Càng ít thao tác càng tốt: paste cURL là chạy, Ctrl+Enter để gửi, tự lưu.
+
+KIẾN TRÚC:
+- Next.js App Router + TypeScript + Tailwind
+- Lưu trữ v1: IndexedDB (idb-keyval) qua Zustand persist
+    -> không cần config, không lộ token lên cloud, chạy offline.
+    -> Firestore để v2 (chỉ khi cần đồng bộ nhiều máy, BẮT BUỘC có Auth + rules).
+- Gửi request: LAI (hybrid)
+    1. Thử fetch TRỰC TIẾP từ browser.
+    2. Lỗi (CORS / mixed content / network) -> TỰ ĐỘNG gọi lại qua proxy
+       Next.js Route Handler: app/api/proxy/route.ts (không cần Cloud Function).
+    -> Chạy `npm run dev` trên máy => gọi được cả API nội bộ công ty, http://localhost.
+    -> Có thể chọn chế độ: Auto | Direct | Proxy.
+- State: Zustand | Editor + JSON viewer: CodeMirror 6 (@uiw/react-codemirror)
+    -> dùng 1 thư viện cho cả body editor và response viewer (read-only, fold, search).
+
+ĐÁNH ĐỔI (chấp nhận):
+- Dữ liệu chỉ nằm trên 1 trình duyệt/1 máy (v1). Có Export/Import JSON để chuyển máy.
+- Proxy chỉ chạy khi có server Next (dev local hoặc deploy Vercel). Static hosting -> chỉ Direct.
+
+
+================================================================================
+UX - NGUYÊN TẮC "ÍT THAO TÁC"
+================================================================================
+
+[x] Paste cURL vào ô URL -> tự tách method/headers/body.
+[x] Copy as cURL.
+[x] Ctrl+Enter = Send, Enter trong ô URL = Send, Esc = hủy, Ctrl+S = báo "đã tự lưu".
+[x] Ctrl+K = tìm request/lệnh (gõ không dấu vẫn ra), Alt+N = request mới
+    (Ctrl+N bị trình duyệt giữ), Ctrl+B = ẩn/hiện sidebar.
+[x] Xóa không hỏi lại, có nút "Hoàn tác" trên toast (request, lịch sử).
+[x] Tự động lưu (không có modal Save). Tên mặc định "GET /users/1", sửa inline.
+[x] Params <-> URL đồng bộ 2 chiều.
+[x] Body JSON -> tự thêm Content-Type: application/json (nếu chưa có).
+[x] Chọn body JSON/Text/Form khi đang GET -> tự đổi sang POST.
+[x] {{var}} được tô màu trong URL: xanh = có, đỏ = thiếu; chip bên dưới hiện giá trị.
+[x] Headers/Params: bảng key-value (dòng trống cuối tự thành dòng mới) + Bulk edit.
+[x] Auth: ô Bearer token riêng (dùng được {{token}}).
+[x] Layout Request trên / Response dưới, nút chuyển trái/phải, kéo thanh giữa để chỉnh.
+[x] Sidebar thu gọn được.
+[x] History tự ghi, nhóm theo ngày, click mở lại request gốc (kèm response đã lưu).
+
+
+================================================================================
+DANH SÁCH FILE (theo thứ tự viết)
+================================================================================
+
+--- ĐỢT 0: KHỞI TẠO ---
+[x] 0. create-next-app (TS, Tailwind, App Router) + cài zustand, idb-keyval,
+       @uiw/react-codemirror, @codemirror/lang-json, nanoid
+
+--- ĐỢT 1: NỀN TẢNG (test được không cần UI) ---
+[x] 1. lib/types.ts            Interface: Collection, RequestItem, Environment,
+                               HistoryItem, KeyValue, ResponseData; Method, BodyType
+[x] 2. lib/env-resolver.ts     replaceVars(), findVars(), báo biến thiếu
+[x] 3. lib/curl.ts             parseCurl(), toCurl()
+[x] 4. lib/url-params.ts       URL <-> params 2 chiều
+[x] 5. lib/api-client.ts       sendRequest(): direct -> fallback proxy,
+                               đo duration/size, AbortController + timeout
+[x] 6. app/api/proxy/route.ts  Proxy server-side
+[x] 7. lib/storage.ts          Adapter IndexedDB cho Zustand persist (debounce ghi 300ms)
+[x] 8. store/useStore.ts       requests, collections, envs, history (persist)
+                               + response/loading theo từng request (không persist)
+                               + autosave, tự đặt tên, export/import
+[x] 9. scripts/test-lib.ts     28 test curl/env/url-params/build-request
+                               Chạy: npm run test:lib
+    (thêm) lib/id.ts, lib/build-request.ts (thay biến + Bearer + Content-Type)
+    ĐÃ TEST: proxy GET/POST thật, lỗi DNS, ECONNREFUSED, timeout, method/scheme sai.
+
+--- ĐỢT 2: UI REQUEST + RESPONSE ---
+[x] 10. components/request/MethodSelect.tsx
+[x] 11. components/request/UrlInput.tsx         (tô màu {{var}}, paste cURL)
+[x] 12. components/request/KeyValueEditor.tsx   (dùng chung Params/Headers/Form, bulk edit)
+[x] 13. components/request/BodyEditor.tsx       (CodeMirror, validate JSON, Format)
+[x] 14. components/request/AuthEditor.tsx       (None | Bearer)
+[x] 15. components/request/RequestPanel.tsx     (ghép + Send/Cancel + chế độ Auto/Direct/Proxy)
+[x] 16. components/response/ResponsePanel.tsx   (status/time/size + Pretty/Raw/Headers/Preview)
+[x] 17. components/common/CodeView.tsx + CodeEditorInner.tsx (CodeMirror dynamic, ssr:false)
+    (thêm) common/ui.tsx, Toast.tsx, SplitPane.tsx, lib/hotkeys.ts, lib/hooks.ts,
+           app/page.tsx bản tạm (header + split), font Inter/JetBrains Mono (có tiếng Việt)
+    ĐÃ TEST (Edge headless): paste cURL POST -> 201, GET Enter -> 200 + params sync,
+           example.com không CORS -> tự qua proxy, lỗi kết nối, chip biến thiếu,
+           reload vẫn còn dữ liệu, dark mode.
+
+--- ĐỢT 3: SIDEBAR + ENV + PHÍM TẮT ---
+[x] 18. components/sidebar/Sidebar.tsx          (tab Requests | Lịch sử, thu gọn)
+[x] 19. components/sidebar/RequestTree.tsx      (collection, rename double-click, nhân bản,
+                                                 chuyển collection, xóa + hoàn tác)
+[x] 20. components/sidebar/HistoryList.tsx      (nhóm theo ngày)
+[x] 21. components/env/EnvSelector.tsx
+[x] 22. components/env/EnvManager.tsx           (thêm/sửa biến, "Tạo nhanh Dev + Prod")
+[x] 23. components/common/CommandPalette.tsx    (Ctrl+K, tìm không dấu)
+[x] 24. lib/hotkeys.ts
+[x] 25. app/page.tsx                            (header + sidebar + split)
+[x] 26. Export/Import JSON + Proxy token        (components/common/SettingsModal.tsx)
+    (thêm) common/Modal.tsx, common/Menu.tsx, sidebar/InlineRename.tsx
+    ĐÃ TEST (Edge headless, 12 bước): tạo collection, env Dev/Prod + gửi {{baseUrl}},
+           Alt+N, chuyển collection, Ctrl+K, tìm không dấu, history mở lại,
+           xóa + hoàn tác, đổi tên double-click, reload giữ dữ liệu, Ctrl+B.
+
+--- GỌN GIAO DIỆN (sau góp ý "quá nhiều nút") ---
+[x] Header chỉ còn: ẩn/hiện sidebar · tên app · chọn env · Cài đặt
+[x] Bỏ dòng tên request + nút cURL (đổi tên/copy cURL ở menu ⋯ sidebar, Ctrl+K)
+[x] Bỏ ô chọn Auto/Direct/Proxy và nút bố cục -> chuyển vào Cài đặt
+[x] Bỏ tab Auth (chỉ hiện khi request đang dùng); thêm Authorization ở Headers
+[x] Body: bỏ "Không có" (trống = không gửi), gõ body khi GET tự sang POST,
+    nút Format chỉ hiện khi JSON dồn 1 dòng
+[x] Bảng key-value: bỏ dòng tiêu đề, checkbox/xóa chỉ hiện khi rê chuột
+[x] Response: bỏ tab Raw, bỏ nhãn trực tiếp/proxy (xem ở tooltip), Copy chỉ còn icon
+[x] Sidebar: bỏ nút tạo collection (menu ⋯ -> "Collection mới…"), bỏ số đếm
+[x] Chip biến: chỉ báo biến THIẾU; ẩn nút "N" của Next.js dev
+
+--- Ý TƯỞNG SAU (v2) ---
+[ ] Tabs mở nhiều request cùng lúc
+[ ] multipart/form-data (upload file)
+[ ] Kéo thả request giữa các collection
+[ ] Import collection Postman (.json v2.1)
+[ ] Đồng bộ nhiều máy (Firestore + Auth + rules)
+
+
+================================================================================
+LƯU Ý KỸ THUẬT
+================================================================================
+
+1. Lỗi fetch chỉ là TypeError -> không phân biệt được CORS / mixed content /
+   network. Thông báo liệt kê đủ khả năng + cho biết đã thử proxy chưa.
+2. Đo đạc: duration = performance.now(); size = byte của body;
+   proxy trả thêm header đầy đủ (direct thì một số header bị CORS ẩn).
+3. CodeMirror: next/dynamic ssr:false.
+4. Response lớn: chỉ hiển thị tối đa ~5MB; history chỉ lưu body tối đa 100KB.
+5. History giữ 100 bản gần nhất.
+6. Env: thay {{var}} trước khi gửi (url, params, headers, body, token).
+7. Proxy: chặn method lạ, chỉ http/https, timeout 30s (tối đa 120s), response <= 50MB.
+   Tùy chọn khóa proxy: PROXY_TOKEN trong .env.local.
+   Chỉ dùng local/cá nhân - KHÔNG deploy công khai (sẽ thành open proxy).
+8. Non-JSON response (HTML/text) -> hiển thị text; ảnh -> preview.
+
+
+================================================================================
+TIÊU CHÍ XONG
+================================================================================
+
+[x] Paste cURL -> Ctrl+Enter -> thấy response
+[x] Gọi được API không bật CORS và http://localhost (qua proxy)
+[x] Request tự lưu, mở lại được sau khi reload
+[x] {{baseUrl}}, {{token}} đổi theo env
+[x] Xem response JSON (fold/search) + status/time/size/headers
+[x] History hoạt động
+[x] Ctrl+K tìm request
+[ ] Dùng thay Postman hàng ngày  <- bạn dùng thử và góp ý
+================================================================================
